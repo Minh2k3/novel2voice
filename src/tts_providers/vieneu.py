@@ -90,8 +90,8 @@ class VieNeuTTSProvider(BaseTTSProvider):
         self.model_name = model_name or getattr(config, "VIENEU_MODEL_NAME", None)
 
         # Voice cloning
-        self.ref_audio = ref_audio
-        self.ref_text = ref_text
+        self.ref_audio = ref_audio or getattr(config, "VIENEU_REF_AUDIO", None)
+        self.ref_text = ref_text or getattr(config, "VIENEU_REF_TEXT", None)
 
         self._tts = None  # Lazy load
 
@@ -118,6 +118,13 @@ class VieNeuTTSProvider(BaseTTSProvider):
         """Khởi tạo VieNeu-TTS instance lần đầu (lazy load)."""
         if self._tts is not None:
             return
+
+        if self.ref_audio:
+            ref_path = Path(self.ref_audio)
+            if not ref_path.is_file():
+                raise ValueError(f"Không tìm thấy file giọng mẫu: {ref_path}")
+            if ref_path.stat().st_size < 1000:
+                raise ValueError(f"File giọng mẫu quá nhỏ hoặc rỗng: {ref_path}")
 
         # Giảm nhiễu log từ HuggingFace Hub khi không có token
         if not self.hf_token:

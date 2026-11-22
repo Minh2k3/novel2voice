@@ -5,6 +5,8 @@
   "model": "deepseek-chat",
   "provider": "vieneu",
   "voice": "Ngọc Lan",
+  "ref_audio": "assets/voices/sample.wav",
+  "ref_text": "Xin chào các bạn, tôi là Trần Minh. Hôm nay tôi sẽ kể cho các bạn một câu chuyện.",
   "rate": "+0%",
   "glossary_path": "glossary.csv",
   "cleanup_temp": true,

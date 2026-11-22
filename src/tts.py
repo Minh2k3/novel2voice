@@ -27,6 +27,12 @@ def get_tts_provider(
     vieneu_backbone_repo: Optional[str] = None,
     vieneu_backbone_device: Optional[str] = None,
     vieneu_precision: Optional[str] = None,
+    vieneu_codec_repo: Optional[str] = None,
+    vieneu_codec_device: Optional[str] = None,
+    vieneu_api_base: Optional[str] = None,
+    vieneu_model_name: Optional[str] = None,
+    vieneu_ref_audio: Optional[str] = None,
+    vieneu_ref_text: Optional[str] = None,
 ) -> BaseTTSProvider:
     """Factory hàm khởi tạo TTS provider theo cấu hình."""
     provider_name = (provider_name or config.TTS_PROVIDER).lower()
@@ -55,6 +61,12 @@ def get_tts_provider(
             backbone_repo=vieneu_backbone_repo,
             backbone_device=vieneu_backbone_device,
             precision=vieneu_precision,
+            codec_repo=vieneu_codec_repo,
+            codec_device=vieneu_codec_device,
+            api_base=vieneu_api_base,
+            model_name=vieneu_model_name,
+            ref_audio=vieneu_ref_audio,
+            ref_text=vieneu_ref_text,
         )
     else:
         raise ValueError(

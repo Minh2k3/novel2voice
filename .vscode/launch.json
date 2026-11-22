@@ -1,0 +1,20 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug youtube-upload",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "src.main",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "youtube-upload",
+                "${workspaceFolder}/output/videos/hai_dua_tre/hai_dua_tre.mp4",
+                "--privacy",
+                "private"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": false
+        }
+    ]
+}

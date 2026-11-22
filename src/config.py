@@ -44,6 +44,8 @@ VIENEU_BACKBONE_DEVICE = os.getenv("VIENEU_BACKBONE_DEVICE", "cpu")  # "cpu", "c
 VIENEU_PRECISION = os.getenv("VIENEU_PRECISION", None)  # None or "int8" for faster CPU inference
 VIENEU_CODEC_REPO = os.getenv("VIENEU_CODEC_REPO", None)
 VIENEU_CODEC_DEVICE = os.getenv("VIENEU_CODEC_DEVICE", "cpu")  # "cpu" or "cuda"
+VIENEU_REF_AUDIO = os.getenv("VIENEU_REF_AUDIO", None)
+VIENEU_REF_TEXT = os.getenv("VIENEU_REF_TEXT", None)
 VIENEU_API_BASE = os.getenv("VIENEU_API_BASE", None)  # Remote mode only
 VIENEU_MODEL_NAME = os.getenv("VIENEU_MODEL_NAME", None)  # Remote mode only
 

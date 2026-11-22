@@ -10,6 +10,7 @@ from src.text_chunker import TextChunker
 from src.tts import get_tts_provider, BaseTTSProvider
 from src.audio_merger import AudioMerger
 from src.video.base import VideoRenderer
+from src.story_paths import get_story_name, get_story_output_root
 
 console = Console()
 
@@ -60,7 +61,17 @@ class NovelPipeline:
         """Generate a Vietnamese chapter with durable checkpoints."""
         self.audio_merger.check_environment()
         base_name = vi_file.stem.removesuffix("_vi")
-        output_audio = output_audio or config.OUTPUT_DIR / f"{base_name}.mp3"
+        story_root = get_story_output_root(vi_file)
+        input_root = config.INPUT_DIR.resolve()
+        use_media_folder = True
+        try:
+            vi_file.resolve().relative_to(input_root)
+        except ValueError:
+            use_media_folder = False
+        media_dir = story_root / "media" if use_media_folder else story_root
+        output_audio = output_audio or media_dir / f"{base_name}.mp3"
+        if state_dir is None:
+            state_dir = story_root / ".state" / "tts"
         return self._tts_runner(state_dir, retries).run(
             vi_file, output_audio, resume=resume, cleanup=cleanup_temp)
 
@@ -75,10 +86,20 @@ class NovelPipeline:
             raise ValueError("Danh sách chương trống.")
         if output_audio and not combine:
             raise ValueError("--output cho thư mục yêu cầu --combine.")
-        targets = [config.OUTPUT_DIR / f"{f.stem.removesuffix('_vi')}.mp3"
+        story_root = get_story_output_root(sorted_files[0])
+        input_root = config.INPUT_DIR.resolve()
+        use_media_folder = True
+        try:
+            sorted_files[0].resolve().relative_to(input_root)
+        except ValueError:
+            use_media_folder = False
+        media_dir = story_root / "media" if use_media_folder else story_root
+        targets = [media_dir / f"{f.stem.removesuffix('_vi')}.mp3"
                    for f in sorted_files]
         if len(set(p.resolve() for p in targets)) != len(targets):
             raise ValueError("Tên chương trùng đường dẫn audio đầu ra.")
+        if state_dir is None:
+            state_dir = story_root / ".state" / "tts"
         self.audio_merger.check_environment()
         runner = self._tts_runner(state_dir, retries)
         output_files, failures = [], []
@@ -108,7 +129,7 @@ class NovelPipeline:
             raise RuntimeError("Có chương thất bại. Chạy lại cùng lệnh để tiếp tục; "
                                "chương hoàn thành sẽ được tái sử dụng.")
         if combine:
-            target = output_audio or config.OUTPUT_DIR / "combined_novel.mp3"
+            target = output_audio or media_dir / f"{get_story_name(sorted_files[0])}.mp3"
             if target.resolve() in {p.resolve() for p in output_files}:
                 raise ValueError("File gộp phải khác file audio từng chương.")
             runner.combine(output_files, target, resume=resume)
@@ -162,7 +183,15 @@ class NovelPipeline:
                 continue_on_error=continue_on_error,
             )
             if combine:
-                target = output_audio or config.OUTPUT_DIR / "combined_novel.mp3"
+                story_root = get_story_output_root(sorted_files[0])
+                input_root = config.INPUT_DIR.resolve()
+                use_media_folder = True
+                try:
+                    sorted_files[0].resolve().relative_to(input_root)
+                except ValueError:
+                    use_media_folder = False
+                media_dir = story_root / "media" if use_media_folder else story_root
+                target = output_audio or media_dir / f"{get_story_name(sorted_files[0])}.mp3"
                 if target.resolve() in {p.resolve() for p in chapter_audio}:
                     raise ValueError("File gộp phải khác file audio từng chương.")
                 runner = self._tts_runner(state_dir, retries)
@@ -232,9 +261,10 @@ class NovelPipeline:
         episodes = self.plan_videos(chapter_audio, chapters_per_video=chapters_per_video)
         if not episodes:
             raise ValueError("Không có audio chương để render.")
-        directory = output_dir or config.OUTPUT_DIR / "videos"
+        story_root = get_story_output_root(chapter_audio[0])
+        directory = output_dir or story_root / "videos"
         renderer = renderer if renderer is not None else FFmpegVideoRenderer(
-            state_dir=config.OUTPUT_DIR / ".state" / "video", progress=self.progress)
+            state_dir=story_root / ".state" / "video", progress=self.progress)
         service, story = None, None
         translation_map = {}
         if story_config is not None:

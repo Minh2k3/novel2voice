@@ -214,6 +214,35 @@ class JobTests(unittest.TestCase):
 
 
 class UnitTests(unittest.TestCase):
+    def test_vieneu_reference_audio_is_passed_to_infer(self):
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import Mock
+        from src.tts import get_tts_provider
+
+        with tempfile.TemporaryDirectory() as directory:
+            ref = Path(directory) / "voice.wav"
+            ref.write_bytes(b"RIFF" + b"\0" * 2000)
+            provider = get_tts_provider(
+                provider_name="vieneu",
+                vieneu_ref_audio=str(ref),
+                vieneu_ref_text="Xin chào",
+            )
+            provider._tts = Mock()
+            provider._tts.infer.return_value = Mock()
+            output = Path(directory) / "out.wav"
+
+            def fake_save(audio, path):
+                path.write_bytes(b"\0" * 2000)
+
+            with patch.object(provider, "_save_with_format", side_effect=fake_save):
+                provider.generate_speech("Nội dung", output)
+
+            provider._tts.infer.assert_called_once()
+            kwargs = provider._tts.infer.call_args.kwargs
+            self.assertEqual(kwargs["ref_audio"], str(ref))
+            self.assertEqual(kwargs["ref_text"], "Xin chào")
+
     def test_long_token_is_bounded(self):
         self.assertEqual([len(c) for c in TextChunker(10).chunk_text('a' * 25)], [10, 10, 5])
         with self.assertRaises(ValueError):

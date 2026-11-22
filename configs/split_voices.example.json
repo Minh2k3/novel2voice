@@ -1,0 +1,18 @@
+{
+  "_comment": "Du lieu mau. Copy thu muc nay sang input/<ten-truyen>/config/.",
+  "input": "../chapter.txt",
+  "output": "../chapter_segments.json",
+  "characters": [
+    "Lien",
+    "An"
+  ],
+
+  "use_llm": true,
+  "llm_model": "qwen3:14b",
+  "ollama_url": "http://localhost:11434/api/chat",
+  "annotate": "dialogue",
+
+  "max_chars": 400,
+  "unknown_as": "narrator",
+  "keep_meta": true
+}

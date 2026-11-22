@@ -346,7 +346,7 @@ VIENEU_API_BASE=http://127.0.0.1:8000/v1
 VIENEU_MODEL_NAME=TEN_MODEL_TREN_SERVER_CUA_BAN
 ```
 
-URL trên là ví dụ cấu hình, phải khớp server thực tế. Voice cloning có ở lớp Python qua `ref_audio`/`ref_text`, nhưng CLI hiện chưa có tùy chọn clone giọng.
+URL trên là ví dụ cấu hình, phải khớp server thực tế. Voice cloning có thể dùng `--ref-audio` và `--ref-text`, hoặc thiết lập `VIENEU_REF_AUDIO`/`VIENEU_REF_TEXT` trong `.env`.
 
 ### 7.3. Piper local
 

@@ -241,3 +241,4 @@ configs/story.json
 configs/tts.json
 configs/youtube.json
 configs/telegram.json
+configs/split_voices.json

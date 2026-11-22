@@ -62,6 +62,25 @@ SQLite được tích hợp trong Python; không cần cài máy chủ database,
 
 Các bước dưới đây dành cho một bản cài mới và thử tạo audio từ tiếng Việt bằng Edge-TTS. Nếu đã có `.venv` hoặc `.env`, dùng lại cấu hình hiện có thay vì tạo đè. Xem [guide A–Z](docs/SETUP_A_Z_VI.md) để cài theo hệ điều hành và thiết lập từng dịch vụ.
 
+### Test giọng clone VieNeu-TTS
+
+Đặt file mẫu trong `assets/voices/`, sau đó chạy:
+
+```bash
+.venv/bin/python scripts/test_voice_clone.py
+```
+
+Script mặc định quét mọi file audio trong thư mục giọng, tạo 3 câu thử và lưu kết quả
+vào `output/tests/voices/`. Có thể chọn giọng, câu thử hoặc định dạng đầu ra:
+
+```bash
+.venv/bin/python scripts/test_voice_clone.py \
+  --voice sample.wav \
+  --ref-text "Nội dung chính xác của file mẫu" \
+  --text "Xin chào, tôi đang test giọng clone." \
+  --format wav
+```
+
 ### 1. Chuẩn bị công cụ
 
 Trên macOS đã cài Homebrew:
@@ -237,6 +256,16 @@ python -m src.main tts input/my_story_vi --provider vieneu \
   --combine -o output/my_story_full.mp3
 ```
 
+Để clone giọng từ một file ghi âm:
+
+```bash
+python -m src.main tts input/my_story_vi --provider vieneu \
+  --ref-audio assets/voices/sample.wav \
+  --ref-text "Nội dung chính xác trong đoạn ghi âm"
+```
+
+Có thể cấu hình cố định bằng `VIENEU_REF_AUDIO` và `VIENEU_REF_TEXT` trong `.env`.
+
 Mặc định `chapter_1_vi.txt` tạo `output/chapter_1.mp3`. Batch sắp xếp theo thứ tự số tự nhiên: 1, 2, 10. `--combine` vẫn giữ MP3 riêng từng chương; `--no-cleanup` giữ các đoạn audio để thuận tiện khi sửa nội dung.
 
 ### TXT đã dịch sẵn hoặc văn học tiếng Việt → audio/video
@@ -351,6 +380,8 @@ Truyền file bằng `--glossary`. Bật `GLOSSARY_AUTO_UPDATE=true` để học
 | `translate` | Dịch TXT hoặc thư mục TXT |
 | `tts` | Tạo audio từ TXT tiếng Việt |
 | `process` | Dịch + TTS; thêm video/upload khi được yêu cầu |
+| `split-voice` | Tách TXT thành JSON segment theo nhân vật |
+| `synthesize-voices` | Tổng hợp segment bằng giọng riêng cho từng nhân vật |
 | `plan-videos` | Xem cách chia audio chương thành video |
 | `render-video` | Render từ audio và ảnh nền có sẵn |
 | `youtube-auth` | Đăng nhập OAuth và lấy channel ID |

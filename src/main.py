@@ -41,6 +41,175 @@ def telegram_bot_command(
         raise typer.Exit(code=1)
 
 
+@app.command("split-voice")
+def split_voice_command(
+    config_file: Path = typer.Option(
+        None,
+        "--config",
+        dir_okay=False,
+        help="File JSON cấu hình để tách văn bản thành các segment JSON.",
+    ),
+):
+    """Tách văn bản truyện thành từng segment giọng đọc theo file cấu hình."""
+    if config_file is None:
+        console.print(
+            "[red]✖ Cần --config, ví dụ: "
+            "novel2voice split-voice --config input/hai_dua_tre/config/split_voices.json[/red]"
+        )
+        raise typer.Exit(code=1)
+    if not config_file.is_file():
+        console.print(f"[red]✖ Không tìm thấy file config: {config_file}[/red]")
+        raise typer.Exit(code=1)
+    from src.split_voices.split_voices import main as split_voices_main
+
+    original_argv = sys.argv
+    sys.argv = [
+        "split_voices.py",
+        "--config",
+        str(config_file.resolve()),
+    ]
+    try:
+        split_voices_main()
+    except SystemExit as error:
+        if error.code not in (None, 0):
+            raise typer.Exit(code=1)
+    except Exception as error:
+        console.print(f"[red]✖ Lỗi tách giọng: {error}[/red]")
+        raise typer.Exit(code=1)
+    finally:
+        sys.argv = original_argv
+
+
+@app.command("synthesize-voices")
+def synthesize_voices_command(
+    input_file: Path = typer.Argument(
+        ...,
+        exists=True,
+        dir_okay=False,
+        help="File JSON segments của truyện.",
+    ),
+    voices_file: Optional[Path] = typer.Option(
+        None,
+        "--voices",
+        exists=True,
+        dir_okay=False,
+        help="Voice map tùy chọn; mặc định dùng <thư_mục_truyện>/config/character_voices.json.",
+    ),
+    output_file: Optional[Path] = typer.Option(
+        None,
+        "--output",
+        "-o",
+        dir_okay=False,
+        help="File WAV đầu ra (mặc định: output/<truyện>/media/character.wav).",
+    ),
+    parts_dir: Optional[Path] = typer.Option(
+        None,
+        "--parts",
+        help="Thư mục lưu từng segment WAV.",
+    ),
+    cues: bool = typer.Option(
+        False,
+        "--cues",
+        help="Thêm thẻ cảm xúc thử nghiệm khi tổng hợp.",
+    ),
+):
+    """Tổng hợp audio theo giọng của từng nhân vật."""
+    from src.split_voices.synthesize import main as synthesize_main
+
+    original_argv = sys.argv
+    sys.argv = [
+        "synthesize.py",
+        str(input_file.resolve()),
+    ]
+    if output_file:
+        sys.argv.extend(["-o", str(output_file.resolve())])
+    if voices_file:
+        sys.argv.extend(["--voices", str(voices_file.resolve())])
+    if parts_dir:
+        sys.argv.extend(["--parts", str(parts_dir.resolve())])
+    if cues:
+        sys.argv.append("--cues")
+    try:
+        synthesize_main()
+    except SystemExit as error:
+        if error.code not in (None, 0):
+            raise typer.Exit(code=1)
+    except Exception as error:
+        console.print(f"[red]✖ Lỗi tổng hợp giọng nhân vật: {error}[/red]")
+        raise typer.Exit(code=1)
+    finally:
+        sys.argv = original_argv
+
+
+@app.command("extract-characters")
+def extract_characters_command(
+    input_path: Path = typer.Argument(
+        ...,
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        help="Tệp truyện .txt cần trích xuất nhân vật.",
+    ),
+    llm_model: Optional[str] = typer.Option(
+        None,
+        "--llm",
+        help="Model Ollama dùng để lọc nhân vật, ví dụ qwen3:14b.",
+    ),
+    scan: bool = typer.Option(
+        False,
+        "--scan",
+        help="Cho Ollama đọc toàn truyện theo từng khúc để bổ sung nhân vật.",
+    ),
+    ollama_url: str = typer.Option(
+        "http://localhost:11434/api/chat",
+        "--url",
+        help="Địa chỉ API chat của Ollama.",
+    ),
+    min_count: int = typer.Option(
+        2,
+        "--min-count",
+        min=1,
+        help="Số lần xuất hiện tối thiểu của ứng viên.",
+    ),
+    output_file: Optional[Path] = typer.Option(
+        None,
+        "--output",
+        "-o",
+        dir_okay=False,
+        help="File JSON config đầu ra.",
+    ),
+):
+    """Trích tên nhân vật và tạo file config cho lệnh split-voice."""
+    from src.split_voices.extract_characters import main as extract_characters_main
+
+    original_argv = sys.argv
+    sys.argv = [
+        "extract_characters.py",
+        str(input_path),
+        "--url",
+        ollama_url,
+        "--min-count",
+        str(min_count),
+    ]
+    if llm_model:
+        sys.argv.extend(["--llm", llm_model])
+    if scan:
+        sys.argv.append("--scan")
+    if output_file:
+        sys.argv.extend(["-o", str(output_file)])
+
+    try:
+        extract_characters_main()
+    except SystemExit as error:
+        if error.code not in (None, 0):
+            raise typer.Exit(code=1)
+    except Exception as error:
+        console.print(f"[red]✖ Lỗi trích nhân vật: {error}[/red]")
+        raise typer.Exit(code=1)
+    finally:
+        sys.argv = original_argv
+
+
 @app.command("youtube-auth")
 def youtube_auth_command():
     """Đăng nhập Google bằng OAuth Desktop app và hiển thị ID kênh."""
@@ -135,7 +304,11 @@ def render_video_command(
     background: Path = typer.Option(..., "--background", exists=True, file_okay=True, dir_okay=False),
     title: str = typer.Option("", "--title"),
     chapters_per_video: Optional[int] = typer.Option(None, "--chapters-per-video", min=1),
-    output_dir: Path = typer.Option(config.OUTPUT_DIR / "videos", "--output-dir"),
+    output_dir: Optional[Path] = typer.Option(
+        None,
+        "--output-dir",
+        help="Thư mục video (mặc định: output/<truyện>/videos).",
+    ),
     resume: bool = typer.Option(True, "--resume/--no-resume"),
 ):
     """Render MP4, thumbnail JPG và metadata từ audio + ảnh nền."""
@@ -223,6 +396,14 @@ def process_command(
         "--voice", "-v",
         help=f"Giọng đọc TTS (mặc định: {config.TTS_VOICE})."
     ),
+    vieneu_ref_audio: Optional[Path] = typer.Option(
+        None, "--ref-audio", "--clone-audio", exists=True, file_okay=True, dir_okay=False,
+        help="File ghi âm mẫu để VieNeu clone giọng."
+    ),
+    vieneu_ref_text: Optional[str] = typer.Option(
+        None, "--ref-text", "--clone-text",
+        help="Nội dung chính xác trong file ghi âm mẫu."
+    ),
     rate: Optional[str] = typer.Option(
         None,
         "--rate", "-r",
@@ -278,17 +459,28 @@ def process_command(
         if background is not None:
             background = Path(background)
         video_title = config_value(video_title, values, "video_title", "")
-        video_output_dir = config_value(video_output_dir, values, "video_output_dir",
-                                        config.OUTPUT_DIR / "videos")
-        video_output_dir = Path(video_output_dir)
+        video_output_dir = config_value(video_output_dir, values, "video_output_dir", None)
+        if video_output_dir is not None:
+            video_output_dir = Path(video_output_dir)
         chapters_per_video = config_value(chapters_per_video, values, "chapters_per_video")
         max_chapters = config_value(max_chapters, values, "max_chapters", 1)
         output_audio = config_value(output_audio, values, "output_audio")
         if output_audio is not None:
             output_audio = Path(output_audio)
         voice = config_value(voice, values, "voice")
+        vieneu_ref_audio = config_value(vieneu_ref_audio, values, "ref_audio")
+        vieneu_ref_text = config_value(vieneu_ref_text, values, "ref_text")
+        if vieneu_ref_audio is not None:
+            vieneu_ref_audio = Path(vieneu_ref_audio)
         rate = config_value(rate, values, "rate")
         provider = config_value(provider, values, "provider")
+        tts_prov = get_tts_provider(
+            provider_name=provider,
+            voice=voice,
+            rate=rate,
+            vieneu_ref_audio=str(vieneu_ref_audio) if vieneu_ref_audio is not None else None,
+            vieneu_ref_text=vieneu_ref_text,
+        )
         model = config_value(model, values, "model")
         translation_provider = config_value(translation_provider, values, "translation_provider")
         glossary_path = config_value(glossary_path, values, "glossary_path")
@@ -441,6 +633,14 @@ def tts_command(
         "--voice", "-v",
         help="Giọng đọc theo provider; VieNeu mặc định dùng VIENEU_VOICE."
     ),
+    vieneu_ref_audio: Optional[Path] = typer.Option(
+        None, "--ref-audio", "--clone-audio", exists=True, file_okay=True, dir_okay=False,
+        help="File ghi âm mẫu để VieNeu clone giọng."
+    ),
+    vieneu_ref_text: Optional[str] = typer.Option(
+        None, "--ref-text", "--clone-text",
+        help="Nội dung chính xác trong file ghi âm mẫu."
+    ),
     rate: Optional[str] = typer.Option(
         None,
         "--rate", "-r",
@@ -504,6 +704,10 @@ def tts_command(
         if output_audio is not None:
             output_audio = Path(output_audio)
         voice = config_value(voice, values, "voice")
+        vieneu_ref_audio = config_value(vieneu_ref_audio, values, "ref_audio")
+        vieneu_ref_text = config_value(vieneu_ref_text, values, "ref_text")
+        if vieneu_ref_audio is not None:
+            vieneu_ref_audio = Path(vieneu_ref_audio)
         rate = config_value(rate, values, "rate")
         provider = config_value(provider, values, "provider")
         cleanup_temp = config_value(cleanup_temp, values, "cleanup_temp", True)
@@ -521,9 +725,9 @@ def tts_command(
         if story_config is not None:
             story_config = Path(story_config)
         video_title = config_value(video_title, values, "video_title", "")
-        video_output_dir = config_value(video_output_dir, values, "video_output_dir",
-                                        config.OUTPUT_DIR / "videos")
-        video_output_dir = Path(video_output_dir)
+        video_output_dir = config_value(video_output_dir, values, "video_output_dir", None)
+        if video_output_dir is not None:
+            video_output_dir = Path(video_output_dir)
         chapters_per_video = config_value(chapters_per_video, values, "chapters_per_video")
         upload_youtube = config_value(upload_youtube, values, "upload_youtube", False)
         youtube_metadata_file = config_value(youtube_metadata_file, values, "youtube_metadata_file")
@@ -567,6 +771,8 @@ def tts_command(
             plan.add_row("Số file TXT", str(chapter_count))
             plan.add_row("Provider TTS", provider or config.TTS_PROVIDER)
             plan.add_row("Giọng", voice or config.TTS_VOICE)
+            plan.add_row("Giọng mẫu clone", str(vieneu_ref_audio) if vieneu_ref_audio else "Không")
+            plan.add_row("Chữ trong giọng mẫu", vieneu_ref_text or "Không")
             plan.add_row("Tốc độ", rate or config.TTS_RATE)
             plan.add_row("MP3 riêng từng chương", str(chapter_count))
             plan.add_row("Gộp audio", "Có" if combine else "Không")
@@ -594,7 +800,13 @@ def tts_command(
             if not config.YOUTUBE_CHANNEL_ID or not config.YOUTUBE_TOKEN_FILE.is_file():
                 raise ValueError("Chạy youtube-auth và cấu hình YOUTUBE_CHANNEL_ID trước khi chạy pipeline upload.")
 
-        tts_prov = get_tts_provider(provider_name=provider, voice=voice, rate=rate)
+        tts_prov = get_tts_provider(
+            provider_name=provider,
+            voice=voice,
+            rate=rate,
+            vieneu_ref_audio=str(vieneu_ref_audio) if vieneu_ref_audio is not None else None,
+            vieneu_ref_text=vieneu_ref_text,
+        )
         pipeline = NovelPipeline(tts_provider=tts_prov, concurrency=concurrency)
 
         if vi_path.is_file():
@@ -723,4 +935,3 @@ def list_voices():
 
 if __name__ == "__main__":
     app()
-
